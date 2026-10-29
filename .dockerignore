@@ -1,0 +1,28 @@
+# 构建上下文排除（docker build 时不需要这些）
+.git
+.github
+.idea
+.vscode
+
+# Go 构建产物
+build/
+tools/
+*.exe
+*.test
+*.out
+
+# 前端依赖与构建产物（镜像内会重新安装/构建）
+**/node_modules
+**/.umi
+**/.umi-production
+**/dist
+
+# 日志与临时文件
+*.log
+tmp/
+.DS_Store
+
+# 环境与本机配置（密钥）
+*.local.yaml
+.env
+.env.local

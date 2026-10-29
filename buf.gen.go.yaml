@@ -1,0 +1,22 @@
+version: v2
+inputs:
+  - directory: api
+    paths:
+      - api/service
+plugins:
+  # Go 侧 → api/gen/go（gRPC stub，内部服务 + BFF HTTP 服务都需要）
+  # 插件由 make tools 安装到 tools/（版本见 scripts/proto/build-tools.sh）
+  - local: ["tools/protoc-gen-go"]
+    out: api/gen/go
+    opt: paths=source_relative
+  - local: ["tools/protoc-gen-go-grpc"]
+    out: api/gen/go
+    opt: paths=source_relative
+  # kratos errors：ErrorXxx/IsXxx
+  - local: ["tools/protoc-gen-go-errors"]
+    out: api/gen/go
+    opt: paths=source_relative
+  # kratos http stub（只有 BFF：api_service / admin_service 有 HTTP 注解，其余服务不生成路由）
+  - local: ["tools/protoc-gen-go-http"]
+    out: api/gen/go
+    opt: paths=source_relative

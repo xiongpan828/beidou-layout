@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package service.common;
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/common;servicecommon";
+
+// 文件状态（storage-service file.status，库存枚举名）。
+// 生命周期见 docs/storage.md：签发上传地址 → PENDING；PUT 开始时占位 → UPLOADING；写入成功 → UPLOADED
+enum FileStatus {
+  FILE_STATUS_UNSPECIFIED = 0;
+  FILE_STATUS_PENDING = 1; // 已签发上传地址，还没写入
+  FILE_STATUS_UPLOADED = 2; // 已写入对象存储，可读
+  FILE_STATUS_UPLOADING = 3; // 正在写入（占位，并发 / 重复 PUT 直接 409；写入失败回到 PENDING）
+}

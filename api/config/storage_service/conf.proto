@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package config.storage_service;
+
+import "third_party/buf/validate/validate.proto";
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/config/storage_service;conf";
+
+// Config storage-service 配置
+message Config {
+  string grpc_addr = 1 [(buf.validate.field).string = {min_len: 1}]; // gRPC 监听地址（BFF 调用）
+  string http_addr = 2 [(buf.validate.field).string = {min_len: 1}]; // 文件 HTTP 监听地址（网关 /api/v1/storage/* 转发到这里）
+  string dsn = 3 [(buf.validate.field).string = {min_len: 1}]; // PostgreSQL 连接串
+  // 签名 / 公开地址的前缀（如 https://example.com，经网关）；留空则签发相对路径 /api/v1/storage/file/…（同域页面直接用）
+  string base_url = 4 [(buf.validate.field).string = {max_len: 256}];
+  // URL 签名密钥：第一个用于签发，全部用于校验（轮换时把新密钥放第一个，旧的留到签过的地址都过期再删）
+  repeated SignKey sign_keys = 5 [(buf.validate.field).repeated = {min_items: 1}];
+  map<string, Scope> scopes = 6 [(buf.validate.field).map = {min_pairs: 1}]; // 业务场景（key = scope 名）
+}
+
+// SignKey URL 签名密钥
+message SignKey {
+  string id = 1 [(buf.validate.field).string = {pattern: "^[a-z0-9-]{1,32}$"}]; // 写进签名 URL 的 key_id
+  string secret = 2 [(buf.validate.field).string = {min_len: 16}];
+}
+
+// Scope 业务场景：存哪个供应商、key 前缀、允许的扩展名、读权限
+message Scope {
+  string provider_code = 1 [(buf.validate.field).string = {min_len: 1}]; // 后台「存储供应商」里的 code
+  string prefix = 2 [(buf.validate.field).string = {pattern: "^[a-z0-9][a-z0-9/_-]*[a-z0-9]$"}]; // key 前缀（不带首尾 /）
+  repeated string exts = 3 [(buf.validate.field).repeated = {min_items: 1, items: {string: {pattern: "^\\.[a-z0-9]+$"}}}]; // 允许的扩展名（小写带点）
+  bool public_read = 4; // true：不带签名可读（头像等）；false：读需要签名（以当前配置为准，改了对历史文件同样生效）
+  // 签名地址有效期（上传 / 私有读；不填 10 分钟）。私有读的过期时间按窗口对齐（同一窗口内地址不变，客户端缓存能命中），实际 1–2 倍
+  google.protobuf.Duration url_ttl = 5 [(buf.validate.field).duration = {gte: {seconds: 1}}];
+}

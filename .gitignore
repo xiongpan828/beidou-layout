@@ -1,0 +1,40 @@
+# 构建产物
+build/
+dist/
+tools/
+
+# Go
+*.exe
+*.test
+*.out
+vendor/
+
+# 前端
+node_modules/
+.umi/
+.umi-production/
+
+# 环境
+.env
+.env.local
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# 日志
+*.log
+
+# Playwright
+test-results/
+playwright-report/
+tests/e2e/test-results/
+tests/e2e/playwright-report/
+
+# 前端单测编译产物
+.test-dist/
+
+# 本机覆盖配置（密钥等），见 pkg/configx
+*.local.yaml
+

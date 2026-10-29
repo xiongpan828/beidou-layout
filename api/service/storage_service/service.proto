@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package service.storage_service;
+
+import "third_party/buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "service/common/storage_enums.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/storage_service;storagesvc";
+
+// StorageService 对象存储：文件（签名 URL，字节由 storage-service HTTP 代理读写）+ 存储供应商管理。
+// 设计见 docs/storage.md
+service StorageService {
+  // ============ 文件 ============
+
+  // CreateUploadURL 登记一条 PENDING 文件并签发上传地址（客户端 PUT 该地址，写入成功即 UPLOADED）
+  rpc CreateUploadURL(CreateUploadURLReq) returns (CreateUploadURLReply);
+  // GetFile 文件信息 + 访问地址（公有读 scope 是不带签名的稳定地址，私有 scope 是限时签名地址）
+  rpc GetFile(GetFileReq) returns (GetFileReply);
+
+  // ============ 供应商 ============
+
+  // CreateProvider 创建供应商（config 为该类型的配置 JSON，按 MinioConfig / S3Config 校验）
+  rpc CreateProvider(CreateProviderReq) returns (CreateProviderReply);
+  // UpdateProvider 更新供应商（按 code 定位；config 里密钥字段留空 = 不改）
+  rpc UpdateProvider(UpdateProviderReq) returns (UpdateProviderReply);
+  // ListProvider 供应商列表（密钥字段不回显）
+  rpc ListProvider(ListProviderReq) returns (ListProviderReply);
+  // DeleteProvider 删除供应商（被 scope 或文件引用时拒绝）
+  rpc DeleteProvider(DeleteProviderReq) returns (DeleteProviderReply);
+}
+
+// ============ 实体 ============
+
+// File 文件
+message File {
+  uint32 id = 1;
+  string key = 2; // 对象存储 key：{scope.prefix}/{yyyy}/{mm}/{dd}/{32 位随机 hex}{ext}
+  string filename = 3; // 上传时的原始文件名
+  int64 size = 4; // 字节数（UPLOADED 后才有）
+  string content_type = 5;
+  common.FileStatus status = 6;
+  string scope = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+  string url = 10; // 访问地址（公有读：稳定地址；私有：限时签名地址）
+}
+
+// Provider 对象存储供应商
+message Provider {
+  uint32 id = 1;
+  string name = 2;
+  string code = 3; // 唯一编码，服务配置 scope.provider_code 引用它
+  string type = 4; // minio / s3
+  string config = 5; // 配置 JSON（结构见 MinioConfig / S3Config；密钥字段返回空串）
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// MinioConfig MinIO 供应商配置（provider.config 的 JSON）
+message MinioConfig {
+  string endpoint = 1 [(buf.validate.field).string = {min_len: 1, max_len: 256}]; // host:port，不带 scheme
+  string access_key_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 256}];
+  string secret_access_key = 3 [(buf.validate.field).string = {min_len: 1, max_len: 256}]; // 密钥：列表不回显，更新时留空 = 不改
+  string bucket = 4 [(buf.validate.field).string = {min_len: 1, max_len: 256}];
+  string region = 5 [(buf.validate.field).string = {max_len: 128}]; // 可选
+  bool secure = 6; // true = https
+}
+
+// S3Config AWS S3 及兼容存储（OSS / COS / R2 …）供应商配置（provider.config 的 JSON）
+message S3Config {
+  string endpoint = 1 [(buf.validate.field).string = {max_len: 1024}]; // 可选；兼容存储填完整地址（https://…），AWS 留空
+  string access_key_id = 2 [(buf.validate.field).string = {min_len: 1, max_len: 256}];
+  string secret_access_key = 3 [(buf.validate.field).string = {min_len: 1, max_len: 256}]; // 密钥：列表不回显，更新时留空 = 不改
+  string bucket = 4 [(buf.validate.field).string = {min_len: 1, max_len: 256}];
+  string region = 5 [(buf.validate.field).string = {min_len: 1, max_len: 128}];
+  bool use_path_style = 6; // 兼容存储多数需要 path-style
+}
+
+// ============ 文件 ============
+
+// CreateUploadURLReq 签发上传地址
+message CreateUploadURLReq {
+  string scope = 1 [(buf.validate.field).string = {min_len: 1, max_len: 100}]; // 服务配置 scope 的 key
+  string filename = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}]; // 扩展名必须在 scope.exts 里
+}
+
+// CreateUploadURLReply 上传地址
+message CreateUploadURLReply {
+  string key = 1; // 业务表存这个 key
+  string upload_url = 2; // 客户端 PUT 文件字节（带 Content-Type、Content-Length），成功返回 File JSON
+  google.protobuf.Timestamp expire_at = 3; // upload_url 过期时间
+}
+
+// GetFileReq 文件信息
+message GetFileReq {
+  string key = 1 [(buf.validate.field).string = {min_len: 1, max_len: 1024}];
+}
+
+// GetFileReply 文件信息（PENDING / 不存在的文件返回 FILE_NOT_FOUND）
+message GetFileReply {
+  File file = 1;
+}
+
+// ============ 供应商 ============
+
+// CreateProviderReq 创建供应商
+message CreateProviderReq {
+  string name = 1 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+  string code = 2 [(buf.validate.field).string = {pattern: "^[a-z0-9][a-z0-9-]{0,99}$"}];
+  string type = 3 [(buf.validate.field).string = {in: ["minio", "s3"]}];
+  string config = 4 [(buf.validate.field).string = {min_len: 2, max_len: 4096}]; // 配置 JSON
+}
+
+// CreateProviderReply 创建供应商响应
+message CreateProviderReply {
+  Provider provider = 1;
+}
+
+// UpdateProviderReq 更新供应商（按 code 定位，type 不可改）
+message UpdateProviderReq {
+  string code = 1 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+  string name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+  string config = 3 [(buf.validate.field).string = {min_len: 2, max_len: 4096}]; // 密钥字段留空 = 沿用原值
+}
+
+// UpdateProviderReply 更新供应商响应
+message UpdateProviderReply {
+  Provider provider = 1;
+}
+
+// ListProviderReq 供应商列表
+message ListProviderReq {}
+
+// ListProviderReply 供应商列表响应
+message ListProviderReply {
+  repeated Provider providers = 1;
+}
+
+// DeleteProviderReq 删除供应商
+message DeleteProviderReq {
+  string code = 1 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+}
+
+// DeleteProviderReply 删除供应商响应
+message DeleteProviderReply {}

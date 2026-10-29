@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package config.common;
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/config/common;confcommon";
+
+// Proxy 下游代理配置（BFF 共用；key = 下游服务名，如 hello）
+message Proxy {
+  map<string, ProxyGroup> downstreams = 1;
+}
+
+// ProxyGroup 单个下游的代理路径
+message ProxyGroup {
+  repeated string paths = 1; // 支持 filepath.Match 模式
+}

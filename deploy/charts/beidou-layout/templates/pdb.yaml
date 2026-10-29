@@ -1,0 +1,19 @@
+{{- /* 多副本服务：节点维护 / 驱逐时至少保留 1 个 Pod */}}
+{{- range $w := (include "beidou-layout.workloads" $ | fromYaml).items }}
+{{- if gt (int $w.replicas) 1 }}
+{{- $ctx := dict "root" $ "service" $w.service "workload" $w.workload }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "beidou-layout.fullname" $ctx }}
+  namespace: {{ include "beidou-layout.namespace" $ }}
+  labels:
+    {{- include "beidou-layout.labels" $ctx | nindent 4 }}
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "beidou-layout.selectorLabels" $ctx | nindent 6 }}
+{{- end }}
+{{- end }}

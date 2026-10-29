@@ -1,0 +1,53 @@
+# 通用 Go 服务镜像 Dockerfile。
+# 构建哪个服务、二进制名、镜像名由外部决定，不在 Dockerfile 里维护服务清单：
+#
+#   docker build \
+#     --build-arg SERVICE=<binary-name> \
+#     --build-arg PACKAGE=./path/to/service/cmd \
+#     -t <registry>/<image-with-service-name> \
+#     -f deploy/docker/Dockerfile-service .
+#
+# deploy/scripts/build-images.sh 按服务逐个调用；每个 build 只编译一个服务。
+#
+# 构建加速（Go）：
+#   - go.mod/go.sum 单独一层 + `go mod download`：依赖不变时复用 layer
+#   - 挂载 /go/pkg/mod 与 /root/.cache/go-build：跨构建复用 module 与编译缓存
+# 构建阶段跑在构建机原生平台，交叉编译出目标平台二进制，避免 QEMU 模拟整个 go build
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
+
+ARG TARGETOS
+ARG TARGETARCH
+
+ARG SERVICE
+ARG PACKAGE
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download
+
+COPY . .
+
+# 只编译外部指定的一个 package；SERVICE 只作为输出二进制名。
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    set -e; \
+    [ -n "$SERVICE" ] || { echo "missing build arg: SERVICE" >&2; exit 1; }; \
+    [ -n "$PACKAGE" ] || { echo "missing build arg: PACKAGE" >&2; exit 1; }; \
+    CGO_ENABLED=0 GOOS="${TARGETOS:-linux}" GOARCH="${TARGETARCH:-amd64}" \
+      go build -trimpath -o "/out/$SERVICE" "$PACKAGE"
+
+FROM alpine:3.22
+
+# 时区由部署时的 TZ 环境变量决定（chart values 的 timezone）
+RUN apk add --no-cache tzdata ca-certificates && \
+    adduser -D -H -u 10001 app
+
+WORKDIR /app
+
+# /out 中只有外部指定的一个二进制
+COPY --from=builder /out/ /app/
+
+# 非 root 运行
+USER 10001

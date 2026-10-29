@@ -1,0 +1,19 @@
+# 开发环境 overlay（DEPLOY_ENV=dev 时叠在 values.yaml 之后）。
+# 私有密钥见 values.secret.dev.local.yaml（不进仓库）。
+
+namespace: dev-beidou-layout
+
+# 开发镜像 tag（DEPLOY_ENV=dev build-images.sh 回写这里，不动生产的 values.yaml）
+image:
+  tag: ""
+
+config:
+  domain: CHANGE_ME
+
+services:
+  hello-service:
+    config:
+      db_name: dev_hello_service
+  storage-service:
+    config:
+      db_name: dev_storage_service

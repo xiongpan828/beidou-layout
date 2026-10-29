@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package config.api_service;
+
+import "third_party/buf/validate/validate.proto";
+import "config/common/conf.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/config/api_service;conf";
+
+// Config api-service 配置（C 端 HTTP 应用服务）
+message Config {
+  string http_addr = 1 [(buf.validate.field).string = {min_len: 1}];       // HTTP 监听地址
+  string hello_grpc_addr = 2 [(buf.validate.field).string = {min_len: 1}]; // 下游 hello-service gRPC 地址
+  config.common.Proxy proxy = 3;                                           // 接口代理（key=下游服务名）
+}

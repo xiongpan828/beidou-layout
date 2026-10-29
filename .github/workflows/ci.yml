@@ -1,0 +1,113 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # 含 labeled/unlabeled：打上或移除 buf-breaking-ok 标签后重新触发
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+# 公开仓库：工作流只读
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proto:
+    name: proto (lint / breaking / generated)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # buf breaking 需要与 base 分支比对，必须取全量历史
+          fetch-depth: 0
+
+      # 只安装 buf，lint / breaking 由下面的步骤自己跑
+      - uses: bufbuild/buf-action@v1
+        with:
+          version: 1.73.0
+          setup_only: true
+
+      - name: buf lint
+        run: buf lint
+
+      # 只在 PR 上和目标分支比较；有意的破坏性变更打 `buf-breaking-ok` 标签跳过本步，并在 PR 描述说明原因
+      - name: buf breaking (against base branch)
+        if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'buf-breaking-ok') }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags origin "${BASE_REF}:refs/heads/${BASE_REF}"
+          buf breaking --against ".git#branch=${BASE_REF}"
+
+      # make api 先用 scripts/proto/build-tools.sh 安装插件到 tools/，再 buf generate
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: generated code is up to date
+        run: |
+          make api
+          # 新增的生成文件 git diff 看不到，用 status 一起检查
+          test -z "$(git status --porcelain)" || { git status --porcelain; exit 1; }
+
+  go:
+    name: go (build / vet / test / lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./...
+
+      - name: install golangci-lint
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: lint
+        run: make lint
+
+      # 弃用 API 门禁：staticcheck SA1019（禁止使用已标记 Deprecated 的 stdlib / 依赖 API）
+      - name: install staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@2025.1.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: deprecated api check
+        run: make dep-check
+
+  web:
+    name: web (build / typecheck / test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 用根 package.json 的 packageManager 字段取 pnpm 版本
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install
+        run: pnpm install --frozen-lockfile
+
+      # max build 会生成 .umi 临时文件并编译打包（验证 workspace 子路径能被解析）
+      - name: build admin
+        run: pnpm --filter @beidou-layout/web-admin build
+
+      # 类型检查（esbuild/webpack 不做类型检查）；tsconfig 继承 src/.umi，需先 max setup 生成
+      - name: typecheck
+        run: |
+          pnpm --filter @beidou-layout/web-admin typecheck
+          pnpm --filter @beidou-layout/web-admin test

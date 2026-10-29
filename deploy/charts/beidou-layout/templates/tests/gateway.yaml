@@ -1,0 +1,46 @@
+{{- if .Values.tests.enabled }}
+{{- $ctx := dict "root" $ "service" "gateway" "workload" "test" }}
+# helm test（只读，不写数据）：
+#   - 经网关调 B 端问候列表 → 200（网关 → admin-service → hello-service → PostgreSQL 全链路）
+#   - 文件读写路由到 storage-service：不带签名读不存在的文件 → 403 SIGNATURE_INVALID（探测不出文件在不在）
+#   - 运营后台可访问
+# 用 web-admin 镜像（基于 nginx alpine，自带 curl）。
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-test-gateway
+  namespace: {{ include "beidou-layout.namespace" $ }}
+  labels:
+    {{- include "beidou-layout.labels" $ctx | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  {{- with .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  containers:
+    - name: curl
+      image: {{ include "beidou-layout.image" (dict "root" $ "image" "web-admin") }}
+      command:
+        - sh
+        - -ec
+        - |
+          base=http://gateway:9080
+          post() { curl -s -o /tmp/body -w '%{http_code}' -X POST -H 'content-type: application/json' -d "$2" "$base$1"; }
+          code=$(post /api/v1/admin/Hello/ListGreeting '{"page":{"current":1,"size":1}}')
+          echo "admin API → $code $(cat /tmp/body)"
+          [ "$code" = 200 ]
+          code=$(curl -s -o /tmp/body -w '%{http_code}' $base/api/v1/storage/file/helm-test/none.txt)
+          echo "storage file without signature → $code $(cat /tmp/body)"
+          [ "$code" = 403 ] && grep -q SIGNATURE_INVALID /tmp/body
+          code=$(curl -s -o /dev/null -w '%{http_code}' $base/admin/)
+          echo "admin web → $code"
+          [ "$code" = 200 ]
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { memory: 64Mi }
+{{- end }}

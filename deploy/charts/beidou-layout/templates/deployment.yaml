@@ -1,0 +1,34 @@
+{{- range $w := (include "beidou-layout.workloads" $ | fromYaml).items }}
+{{- $_ := set $w "root" $ }}
+{{- $ctx := dict "root" $ "service" $w.service "workload" $w.workload }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "beidou-layout.fullname" $ctx }}
+  namespace: {{ include "beidou-layout.namespace" $ }}
+  labels:
+    {{- include "beidou-layout.labels" $ctx | nindent 4 }}
+spec:
+  replicas: {{ $w.replicas }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ $w.maxSurge }}
+      maxUnavailable: {{ $w.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "beidou-layout.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "beidou-layout.labels" $ctx | nindent 8 }}
+      {{- if include "beidou-layout.hasConfig" $ctx }}
+      annotations:
+        # 本服务配置变化 → Pod 模板变化 → 只有本服务滚动重启
+        checksum/config: {{ include "beidou-layout.configData" $ctx | sha256sum }}
+      {{- end }}
+    spec:
+      {{- include "beidou-layout.podSpec" $w | trim | nindent 6 }}
+{{- end }}

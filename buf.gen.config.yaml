@@ -1,0 +1,10 @@
+version: v2
+inputs:
+  - directory: api
+    paths:
+      - api/config
+plugins:
+  # 配置 proto 只生成 Go 结构体（不生成 grpc/http/ts）
+  - local: ["tools/protoc-gen-go"]
+    out: api/gen/go
+    opt: paths=source_relative

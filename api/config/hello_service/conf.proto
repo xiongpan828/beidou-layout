@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package config.hello_service;
+
+import "third_party/buf/validate/validate.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/config/hello_service;conf";
+
+// Config hello-service 配置
+message Config {
+  string grpc_addr = 1 [(buf.validate.field).string = {min_len: 1}]; // gRPC 监听地址
+  string dsn = 2 [(buf.validate.field).string = {min_len: 1}];       // PostgreSQL 连接串
+}

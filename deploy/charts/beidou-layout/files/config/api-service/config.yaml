@@ -1,0 +1,5 @@
+http_addr: ":8100"
+hello_grpc_addr: "hello-service:9100"
+proxy:
+  # 代理到下游的 rpc 路径（key=下游服务名；未实现方法自动转发，手写的方法不要列在这里）
+  downstreams: {}

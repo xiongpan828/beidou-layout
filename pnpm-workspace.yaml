@@ -1,0 +1,11 @@
+packages:
+  # 前端应用
+  - 'app/web/*'
+  # proto 生成的 TS 请求桩
+  - 'api/gen/ts'
+
+allowBuilds:
+  core-js: true
+  core-js-pure: true
+  es5-ext: true
+  esbuild: true

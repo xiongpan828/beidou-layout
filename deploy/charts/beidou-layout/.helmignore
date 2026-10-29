@@ -1,0 +1,7 @@
+.DS_Store
+*.swp
+*.bak
+*.tmp
+README.md
+# 私有 values（密钥）不能打进 chart 包
+*.local.yaml

@@ -1,0 +1,26 @@
+grpc_addr: ":9300"
+# 文件读写 HTTP（网关 /api/v1/storage/* 转发到这里；签名在本服务校验，不经过 BFF）
+http_addr: ":9301"
+dsn: "host=127.0.0.1 user=postgres password=postgres dbname=storage_service port=5432 sslmode=disable TimeZone=UTC"
+# 签名 / 公开地址前缀；留空签发相对路径 /api/v1/storage/file/…（浏览器同域访问；本地运营后台 dev 代理把 /api/v1/storage 直接转到 :9301）
+base_url: ""
+# URL 签名密钥（本地开发值；部署环境换成随机值）：第一个签发，全部可校验
+sign_keys:
+  - id: "k1"
+    secret: "dev-only-change-me-storage-sign"
+# 业务场景：provider_code 必须是后台「存储供应商」里创建的 code
+scopes:
+  # 头像：公有读，地址不带签名、长缓存
+  avatar:
+    provider_code: "default"
+    prefix: "avatar"
+    exts: [".jpg", ".jpeg", ".png", ".webp"]
+    public_read: true
+    url_ttl: "600s"
+  # 附件：私有，读需要签名（业务接口用 GetFile 签发限时地址）
+  attachment:
+    provider_code: "default"
+    prefix: "attachment"
+    exts: [".jpg", ".jpeg", ".png", ".webp", ".pdf", ".txt"]
+    public_read: false
+    url_ttl: "3600s"

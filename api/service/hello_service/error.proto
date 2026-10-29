@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package service.hello_service;
+
+import "third_party/errors/errors.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/hello_service;hellosvc";
+
+// ErrorReason hello-service 错误码（段 2：20xx 问候）
+enum ErrorReason {
+  option (errors.default_code) = 500;
+
+  SUCCESS = 0; // 成功
+
+  // 问候（20xx）
+  GREETING_CREATE_FAIL = 2001; // 问候记录写入失败
+  GREETING_GET_FAIL = 2002; // 问候记录查询失败
+}

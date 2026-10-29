@@ -1,0 +1,2 @@
+grpc_addr: ":9100"
+dsn: "host={{ .db_host }} user={{ .db_user }} password={{ .db_password }} dbname={{ .db_name }} port={{ .db_port }} sslmode={{ .db_sslmode }} TimeZone=UTC"

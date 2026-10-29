@@ -1,0 +1,26 @@
+{
+  "name": "@beidou-layout/web-admin",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "PORT=3000 max dev",
+    "build": "APP_BASE=/admin/ max build",
+    "setup": "max setup",
+    "typecheck": "max setup && tsc --noEmit",
+    "test": "rm -rf .test-dist && tsc -p tsconfig.test.json && TZ=UTC node --test .test-dist/tests/"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.4",
+    "@beidou-layout/api-gen": "workspace:*",
+    "antd": "^6.6.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@umijs/max": "^4.7.24",
+    "typescript": "^5.6.3"
+  }
+}

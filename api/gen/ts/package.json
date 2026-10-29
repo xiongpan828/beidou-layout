@@ -1,0 +1,22 @@
+{
+  "name": "@beidou-layout/api-gen",
+  "version": "0.0.0",
+  "private": true,
+  "description": "由 proto 生成的 TS 请求桩（勿手改，make api 重新生成；新增 HTTP 服务时在 exports 登记一行）",
+  "types": "service/api_service/api_hello/index.ts",
+  "main": "service/api_service/api_hello/index.ts",
+  "exports": {
+    "./service/admin_service/admin_hello": {
+      "types": "./service/admin_service/admin_hello/index.ts",
+      "default": "./service/admin_service/admin_hello/index.ts"
+    },
+    "./service/admin_service/admin_storage": {
+      "types": "./service/admin_service/admin_storage/index.ts",
+      "default": "./service/admin_service/admin_storage/index.ts"
+    },
+    "./service/api_service/api_hello": {
+      "types": "./service/api_service/api_hello/index.ts",
+      "default": "./service/api_service/api_hello/index.ts"
+    }
+  }
+}

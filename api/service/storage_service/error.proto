@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package service.storage_service;
+
+import "third_party/errors/errors.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/storage_service;storagesvc";
+
+// ErrorReason storage-service 错误码（段 3：30xx 文件 / 31xx 签名与 scope / 32xx 供应商）
+enum ErrorReason {
+  option (errors.default_code) = 500;
+
+  SUCCESS = 0; // 成功
+
+  // 文件（30xx）
+  FILE_NOT_FOUND = 3001 [(errors.code) = 404]; // 文件不存在（含还没上传的 PENDING 文件）
+  FILE_GET_FAIL = 3002; // 文件查询失败
+  FILE_CREATE_FAIL = 3003; // 文件登记失败
+  FILE_UPDATE_FAIL = 3004; // 文件状态更新失败
+  FILE_EXT_NOT_ALLOWED = 3005 [(errors.code) = 400]; // 扩展名不在 scope.exts 里
+  FILE_ALREADY_UPLOADED = 3006 [(errors.code) = 409]; // 一个 key 只能写一次（已写入或正在写入）
+  FILE_CONTENT_LENGTH_REQUIRED = 3007 [(errors.code) = 411]; // 上传必须带 Content-Length
+  OBJECT_STORAGE_FAIL = 3008 [(errors.code) = 502]; // 读写对象存储失败
+
+  // 签名与 scope（31xx）
+  SIGNATURE_INVALID = 3101 [(errors.code) = 403]; // 签名缺失 / 错误 / 过期
+  SCOPE_NOT_FOUND = 3102 [(errors.code) = 400]; // scope 未配置
+
+  // 供应商（32xx）
+  PROVIDER_NOT_FOUND = 3201 [(errors.code) = 404]; // 供应商不存在
+  PROVIDER_CODE_EXISTS = 3202 [(errors.code) = 409]; // 供应商 code 已存在
+  PROVIDER_TYPE_NOT_SUPPORTED = 3203 [(errors.code) = 400]; // 供应商类型不支持
+  PROVIDER_CONFIG_INVALID = 3204 [(errors.code) = 400]; // 供应商配置非法
+  PROVIDER_GET_FAIL = 3205; // 供应商查询失败
+  PROVIDER_CREATE_FAIL = 3206; // 供应商创建失败
+  PROVIDER_UPDATE_FAIL = 3207; // 供应商更新失败
+  PROVIDER_DELETE_FAIL = 3208; // 供应商删除失败
+  PROVIDER_IN_USE = 3209 [(errors.code) = 409]; // 供应商被 scope 或文件引用，不能删除
+}

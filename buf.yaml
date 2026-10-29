@@ -1,0 +1,44 @@
+version: v2
+modules:
+  - path: api
+    excludes:
+      - api/gen
+lint:
+  use:
+    - FILE_LOWER_SNAKE_CASE
+    - SYNTAX_SPECIFIED
+    - IMPORT_USED
+    - PACKAGE_DEFINED
+    - PACKAGE_LOWER_SNAKE_CASE
+    - DIRECTORY_SAME_PACKAGE
+    - SERVICE_PASCAL_CASE
+    - RPC_PASCAL_CASE
+    - FIELD_LOWER_SNAKE_CASE
+    - ENUM_PASCAL_CASE
+    - ENUM_FIRST_VALUE_ZERO
+    # 枚举值大写下划线、带枚举名前缀、0 值为 XXX_UNSPECIFIED（Buf / AIP-126 规范）
+    - ENUM_VALUE_UPPER_SNAKE_CASE
+    - ENUM_VALUE_PREFIX
+    - ENUM_ZERO_VALUE_SUFFIX
+    - MESSAGE_PASCAL_CASE
+    # package 必须与目录路径一致（service.{svc} / config.{svc} / service.common / config.common）
+    - PACKAGE_DIRECTORY_MATCH
+  ignore:
+    # vendored 第三方 proto，不做本仓 lint 约束
+    - api/third_party
+  ignore_only:
+    # kratos errors 的 ErrorReason 惯例：值不带前缀（GREETING_GET_FAIL），0 为 SUCCESS
+    # 新增服务的 error.proto 时在这两处各登记一行
+    ENUM_VALUE_PREFIX:
+      - api/service/common/error.proto
+      - api/service/hello_service/error.proto
+      - api/service/storage_service/error.proto
+    ENUM_ZERO_VALUE_SUFFIX:
+      - api/service/common/error.proto
+      - api/service/hello_service/error.proto
+      - api/service/storage_service/error.proto
+breaking:
+  use:
+    - FILE
+    - PACKAGE
+    - WIRE_JSON

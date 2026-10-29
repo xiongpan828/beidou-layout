@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package service.admin_service.admin_hello;
+
+import "third_party/google/api/annotations.proto";
+import "service/hello_service/service.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/admin_service/admin_hello;adminhello";
+
+// Hello B 端问候接口：直接复用 hello-service 的请求 / 响应，
+// service 不写方法，由 pkg/proxyx 按配置 proxy.downstreams 自动转发
+service Hello {
+  // SayHello 问候
+  rpc SayHello(hello_service.SayHelloReq) returns (hello_service.SayHelloReply) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/Hello/SayHello"
+      body: "*"
+    };
+  }
+  // ListGreeting 问候记录列表
+  rpc ListGreeting(hello_service.ListGreetingReq) returns (hello_service.ListGreetingReply) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/Hello/ListGreeting"
+      body: "*"
+    };
+  }
+}

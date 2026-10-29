@@ -1,0 +1,16 @@
+{{- /* 有 files/config/<服务>/ 的服务：一个 ConfigMap，挂到 /app/configs/ */}}
+{{- range $service, $svc := .Values.services }}
+{{- $ctx := dict "root" $ "service" $service "workload" "server" }}
+{{- if include "beidou-layout.hasConfig" $ctx }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $service }}-config
+  namespace: {{ include "beidou-layout.namespace" $ }}
+  labels:
+    {{- include "beidou-layout.labels" $ctx | nindent 4 }}
+data:
+  {{- include "beidou-layout.configData" $ctx | nindent 2 }}
+{{- end }}
+{{- end }}

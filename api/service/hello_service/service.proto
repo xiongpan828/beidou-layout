@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package service.hello_service;
+
+import "third_party/buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "service/common/params.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/hello_service;hellosvc";
+
+// HelloService 示例 gRPC 服务：问候并记录（新服务照此结构复制）
+service HelloService {
+  // SayHello 问候一次（写一条问候记录）
+  rpc SayHello(SayHelloReq) returns (SayHelloReply);
+  // ListGreeting 问候记录列表
+  rpc ListGreeting(ListGreetingReq) returns (ListGreetingReply);
+}
+
+// ============ 实体 ============
+
+// Greeting 问候记录
+message Greeting {
+  uint32 id = 1;
+  string name = 2;
+  string message = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+// ============ 问候 ============
+
+// SayHelloReq 问候请求
+message SayHelloReq {
+  string name = 1 [(buf.validate.field).string = {min_len: 1, max_len: 50}];
+}
+
+// SayHelloReply 问候响应
+message SayHelloReply {
+  Greeting greeting = 1;
+}
+
+// ListGreetingReq 问候记录列表
+message ListGreetingReq {
+  common.Page page = 1;
+  string name = 2 [(buf.validate.field).string = {max_len: 50}]; // 按名字筛选；空 = 全部
+}
+
+// ListGreetingReply 问候记录列表响应
+message ListGreetingReply {
+  repeated Greeting greetings = 1;
+  int64 total = 2;
+}

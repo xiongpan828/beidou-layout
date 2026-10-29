@@ -1,0 +1,24 @@
+# 运营后台镜像：pnpm 构建 app/web/admin（base /admin/），由 nginx 托管。
+#   docker build -f deploy/docker/Dockerfile-web -t <registry>/web-admin:<tag> .
+
+# 产物是静态文件，与平台无关：构建阶段固定跑在构建机原生平台
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
+
+WORKDIR /app
+
+RUN npm install -g pnpm@11.24.0
+
+# 先复制 workspace 与各包 package.json + lockfile，利用 layer cache
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY app/web/admin/package.json app/web/admin/package.json
+COPY api/gen/ts/package.json api/gen/ts/package.json
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+COPY . .
+RUN pnpm --filter @beidou-layout/web-admin build && test -f app/web/admin/dist/index.html
+
+FROM nginx:1.27-alpine
+COPY --from=builder /app/app/web/admin/dist /usr/share/nginx/html/admin
+COPY deploy/docker/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

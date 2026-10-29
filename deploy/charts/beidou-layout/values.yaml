@@ -1,0 +1,128 @@
+# 生产基线 —— 一个 chart 包含全部业务：网关 + BFF + gRPC 服务 + 前端。
+# 需自备：TLS 终止的外部入口（转发到网关 :9080）、PostgreSQL、镜像仓库拉取凭据。
+# 新项目先把 CHANGE_ME 都填上（deploy.sh 发现 CHANGE_ME 会拒绝部署）。
+#
+# 服务之间按固定名字互相访问（hello-service:9100 …），一个命名空间只装一个 release。
+
+# 部署的命名空间：写进全部资源的 metadata.namespace，配置变量 .namespace 也取这里
+# （deploy.sh 读取它作为 helm -n，release 与资源始终在同一个命名空间）
+namespace: beidou-layout
+
+image:
+  registry: CHANGE_ME/beidou-layout
+  # 业务镜像 tag（deploy/scripts/build-images.sh 推送后回写为 <时间戳>-<commit>）；为空时用 Chart.appVersion
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# 预先在命名空间里建好的镜像仓库拉取凭据；仓库公开时置空 []
+imagePullSecrets: []
+
+# 容器时区（所有工作负载的 TZ 环境变量）
+timezone: UTC
+
+# ============ 配置变量 ============
+# files/config/<服务名>/* 用 tpl 渲染，变量 = config 与 services.<服务名>.config 合并（服务优先），另有内置 .namespace（= namespace）/ .release。
+# 工作负载的 env 值也按同样的变量渲染。
+config:
+  domain: CHANGE_ME
+  # PostgreSQL（库名在各服务的 config.db_name）。值会拼进 libpq DSN：密码不要含空格、引号、反斜杠
+  db_host: CHANGE_ME
+  db_port: 5432
+  db_user: postgres
+  db_password: CHANGE_ME          # 在私有 values（values.secret*.local.yaml）里覆盖，不写进仓库
+  db_sslmode: disable             # 生产建议 require
+  # 对象存储签名 URL 密钥（storage-service sign_keys，≥ 16 位，openssl rand -hex 32）；同样在私有 values 里覆盖
+  storage_sign_secret: CHANGE_ME
+
+# ============ 工作负载默认值 ============
+# 合并顺序：defaults < services.<服务>.workloads.<名字>（右边优先）
+defaults:
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits: { memory: 256Mi }
+  # 滚动发布：先起新 Pod 再停旧 Pod，发布期间不减容量
+  maxSurge: 1
+  maxUnavailable: 0
+  # 停止前先等 endpoints 摘除再发 SIGTERM（k8s 原生 sleep 动作，不依赖镜像里的 sleep）
+  preStopSleepSeconds: 5
+  terminationGracePeriodSeconds: 30
+  podSecurityContext:
+    seccompProfile: { type: RuntimeDefault }
+  securityContext:
+    allowPrivilegeEscalation: false
+
+# ============ 服务 ============
+# services.<服务名>：
+#   image     镜像名（默认 = 服务名）
+#   config    该服务的配置变量（覆盖全局 config）
+#   workloads.<名字>（server → 资源名 = 服务名；其他 → <服务名>-<名字>）：
+#     args / ports（name: port，第一个端口做探针）/ replicas / resources / terminationGracePeriodSeconds
+#     env        环境变量，值支持 {{ .变量 }}
+#     migrate    true：启动前跑 ./<镜像名> migrate（gormigrate，幂等）
+#     serviceType / serviceAnnotations  Service 类型与注解（网关对外入口用；固定 IP 等 LB 相关设置写在注解里）
+# 有 files/config/<服务名>/ 的服务自动生成 ConfigMap 挂到 /app/configs/，内容一变该服务自动滚动重启。
+# replicas > 1 的服务自动生成 PodDisruptionBudget，并尽量分散到不同节点。
+
+services:
+  # 网关：app/gateway（APISIX + 路由打在镜像里），集群内入口 gateway:9080
+  gateway:
+    workloads:
+      server:
+        ports: { http: 9080 }
+        replicas: 2
+        resources:
+          requests: { cpu: 100m, memory: 128Mi }
+          limits: { memory: 512Mi }
+
+  # C 端 BFF
+  api-service:
+    workloads:
+      server:
+        args: ["./api-service", "-conf", "configs/config.yaml"]
+        ports: { http: 8100 }
+        replicas: 2
+
+  # B 端 BFF（运营后台）
+  admin-service:
+    workloads:
+      server:
+        args: ["./admin-service", "-conf", "configs/config.yaml"]
+        ports: { http: 8000 }
+
+  # 对象存储：gRPC :9300（BFF 调用）+ 文件读写 HTTP :9301（网关 /api/v1/storage/* 转发，靠 URL 签名）
+  storage-service:
+    config:
+      db_name: storage_service
+    workloads:
+      server:
+        args: ["./storage-service", "storage", "-c", "configs/config.yaml"]
+        ports: { grpc: 9300, http: 9301 }
+        migrate: true
+        # 文件字节经服务端代理：给内存留余量（流式转发，不整文件缓存）
+        resources:
+          requests: { cpu: 50m, memory: 64Mi }
+          limits: { memory: 512Mi }
+
+  # 示例 gRPC 服务（新服务照此复制一段）
+  hello-service:
+    config:
+      db_name: hello_service
+    workloads:
+      server:
+        args: ["./hello-service", "hello", "-c", "configs/config.yaml"]
+        ports: { grpc: 9100 }
+        migrate: true
+
+  # 运营后台（app/web/admin，nginx 静态托管）：网关 /* 都到这里
+  web-admin:
+    workloads:
+      server:
+        ports: { http: 80 }
+        resources:
+          requests: { cpu: 20m, memory: 32Mi }
+          limits: { memory: 128Mi }
+
+# helm test：经网关调问候接口（网关 → BFF → hello-service → PG 全链路）、文件路由、运营后台
+tests:
+  enabled: true

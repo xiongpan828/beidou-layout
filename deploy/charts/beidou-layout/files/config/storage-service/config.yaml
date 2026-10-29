@@ -1,0 +1,23 @@
+grpc_addr: ":9300"
+http_addr: ":9301"
+dsn: "host={{ .db_host }} user={{ .db_user }} password={{ .db_password }} dbname={{ .db_name }} port={{ .db_port }} sslmode={{ .db_sslmode }} TimeZone=UTC"
+# 签名 / 公开地址经网关对外（网关 /api/v1/storage/* → storage-service:9301）
+base_url: "https://{{ .domain }}"
+# 第一个签发，全部可校验；轮换：新密钥放第一个，旧的留到签过的地址都过期再删
+sign_keys:
+  - id: "k1"
+    secret: "{{ .storage_sign_secret }}"
+# provider_code 必须是后台「存储供应商」里创建的 code（部署后先建 code=default 的供应商）
+scopes:
+  avatar:
+    provider_code: "default"
+    prefix: "avatar"
+    exts: [".jpg", ".jpeg", ".png", ".webp"]
+    public_read: true
+    url_ttl: "600s"
+  attachment:
+    provider_code: "default"
+    prefix: "attachment"
+    exts: [".jpg", ".jpeg", ".png", ".webp", ".pdf", ".txt"]
+    public_read: false
+    url_ttl: "3600s"

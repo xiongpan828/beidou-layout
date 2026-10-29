@@ -1,0 +1,35 @@
+{{- range $w := (include "beidou-layout.workloads" $ | fromYaml).items }}
+{{- if $w.ports }}
+{{- $ctx := dict "root" $ "service" $w.service "workload" $w.workload }}
+{{- $type := $w.serviceType | default "ClusterIP" }}
+{{- $annotations := $w.serviceAnnotations }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "beidou-layout.fullname" $ctx }}
+  namespace: {{ include "beidou-layout.namespace" $ }}
+  labels:
+    {{- include "beidou-layout.labels" $ctx | nindent 4 }}
+  {{- with $annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $type }}
+  selector:
+    {{- include "beidou-layout.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    {{- range $name, $port := $w.ports }}
+    - name: {{ $name }}
+      port: {{ $port }}
+      targetPort: {{ $name }}
+      protocol: TCP
+      {{- if eq $name "grpc" }}
+      appProtocol: grpc
+      {{- else if eq $name "http" }}
+      appProtocol: http
+      {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

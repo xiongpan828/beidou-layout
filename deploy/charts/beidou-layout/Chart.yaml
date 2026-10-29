@@ -1,0 +1,10 @@
+apiVersion: v2
+name: beidou-layout
+description: 全套业务：网关（APISIX）+ 2 个 BFF + gRPC 服务 + 运营后台
+type: application
+# chart 自身版本：模板 / values 结构变化时递增
+version: 0.1.0
+# 业务版本；镜像 tag 用 <时间戳>-<commit>，见 values.image.tag
+appVersion: "0.1.0"
+kubeVersion: ">=1.30.0-0"
+keywords: [beidou-layout, apisix, kratos]

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package service.common;
+
+import "third_party/errors/errors.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/common;servicecommon";
+
+// ErrorReason 公共错误码（段 1）：多个服务都会返回、语义完全相同的错误放这里，
+// 各服务自己的错误（含 DB 失败，包装成 XxxFail）放各自的 error.proto
+enum ErrorReason {
+  option (errors.default_code) = 500;
+
+  SUCCESS = 0; // 成功
+}

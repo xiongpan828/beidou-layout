@@ -1,0 +1,280 @@
+/* ==========================================================================
+   Beidou Layout · 管理后台（B 端 PC）
+   暖白底 + 墨色字 + 单一陶土橘强调。
+   工具化取向：紧凑行高、发丝线分区、不用阴影和大圆角，装饰一律去掉。
+   ========================================================================== */
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --admin-bg: #f7f7f5;
+  --admin-surface: #ffffff;
+  --admin-ink: #1b1a17;
+  --admin-ink-2: #4a4842;
+  --admin-muted: #8b8579;
+  --admin-line: #e7e4dc;
+  --admin-line-soft: #f1eee7;
+  --admin-accent: #c05a34;
+  --admin-accent-soft: #f4e9e2;
+  --admin-sage: #6f8a6a;
+  --admin-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --admin-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+body {
+  background: var(--admin-bg);
+  color: var(--admin-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--admin-accent);
+}
+
+::selection {
+  background: var(--admin-accent-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 1px;
+}
+
+/* ================= 外壳 ================= */
+
+.admin-layout {
+  min-height: 100vh;
+  background: var(--admin-bg);
+}
+
+.admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 58px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  background: var(--admin-surface);
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+
+.admin-brand-mark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 6px;
+  background: var(--admin-accent);
+  box-shadow: inset 0 0 0 6px var(--admin-accent), inset 0 0 0 22px var(--admin-bg);
+}
+
+.admin-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.admin-brand-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.admin-brand-sub {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--admin-accent);
+}
+
+/* 一级导航：扁平文字 + 选中下划线（不用卡片） */
+.admin-big-tabs {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+}
+
+.admin-big-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--admin-ink-2);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 160ms var(--admin-ease);
+}
+
+.admin-big-tab:hover {
+  color: var(--admin-ink);
+}
+
+.admin-big-tab strong {
+  font-weight: 500;
+  font-size: 13px;
+  color: inherit;
+}
+
+.admin-big-tab.active {
+  color: var(--admin-ink);
+}
+
+.admin-big-tab.active strong {
+  font-weight: 600;
+}
+
+.admin-big-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--admin-accent);
+}
+
+.admin-main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 20px 24px 48px;
+}
+
+/* ================= 模块容器 ================= */
+
+.admin-module {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.admin-module-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--admin-line);
+  flex-wrap: wrap;
+}
+
+.admin-module-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--admin-ink);
+}
+
+.admin-module-title span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--admin-muted);
+}
+
+.admin-module-body {
+  padding: 16px;
+}
+
+/* 工具栏与内容分层 */
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--admin-line-soft);
+}
+
+.admin-hello-reply {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--admin-accent);
+}
+
+/* ================= 空状态（components/EmptyState） ================= */
+
+.admin-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 0 16px;
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.admin-empty-icon {
+  color: var(--admin-line);
+}
+
+/* ================= antd 适配 ================= */
+
+.admin-layout .ant-btn-primary:not(:disabled):hover {
+  background: #a94b29 !important;
+  border-color: #a94b29 !important;
+}
+
+.admin-module .ant-table {
+  font-size: 13px;
+}
+
+.admin-module .ant-table-wrapper .ant-table-thead > tr > th {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.admin-module .ant-table-tbody > tr > td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ================= 自适应 ================= */
+
+@media (max-width: 900px) {
+  .admin-header {
+    padding: 0 16px;
+    gap: 16px;
+  }
+
+  .admin-main {
+    padding: 16px 16px 40px;
+  }
+
+  .admin-module-body {
+    padding: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

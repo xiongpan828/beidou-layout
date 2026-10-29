@@ -1,0 +1,18 @@
+http_addr: ":8000"
+hello_grpc_addr: "127.0.0.1:9100"
+storage_grpc_addr: "127.0.0.1:9300"
+proxy:
+  # 代理到下游的 rpc 路径（key=下游服务名；未实现方法自动转发，手写的方法不要列在这里）
+  downstreams:
+    hello:
+      paths:
+        - "/service.admin_service.admin_hello.Hello/SayHello"
+        - "/service.admin_service.admin_hello.Hello/ListGreeting"
+    storage:
+      paths:
+        - "/service.admin_service.admin_storage.Storage/CreateUploadURL"
+        - "/service.admin_service.admin_storage.Storage/GetFile"
+        - "/service.admin_service.admin_storage.Storage/ListProvider"
+        - "/service.admin_service.admin_storage.Storage/CreateProvider"
+        - "/service.admin_service.admin_storage.Storage/UpdateProvider"
+        - "/service.admin_service.admin_storage.Storage/DeleteProvider"

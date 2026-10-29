@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package service.api_service.api_hello;
+
+import "third_party/buf/validate/validate.proto";
+import "third_party/google/api/annotations.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/api_service/api_hello;apihello";
+
+// Hello C 端问候接口（BFF 手写：自己的请求 / 响应，service → biz → 下游 hello-service）
+service Hello {
+  // SayHello 问候
+  rpc SayHello(SayHelloReq) returns (SayHelloReply) {
+    option (google.api.http) = {
+      post: "/api/v1/consumer/Hello/SayHello"
+      body: "*"
+    };
+  }
+}
+
+// SayHelloReq 问候请求
+message SayHelloReq {
+  string name = 1 [(buf.validate.field).string = {min_len: 1, max_len: 50}];
+}
+
+// SayHelloReply 问候响应
+message SayHelloReply {
+  string message = 1;
+}

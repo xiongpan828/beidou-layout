@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package service.common;
+
+import "third_party/buf/validate/validate.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/common;servicecommon";
+
+// 公共参数 / 公共 message（跨服务共享）。
+// 公共结构集中在此文件。
+
+// Page 通用偏移分页参数（current 从 1 开始）。
+// 各服务列表请求统一复用：`common.Page page = N;`
+message Page {
+  // 当前页码，从 1 开始
+  uint32 current = 1 [(buf.validate.field).uint32 = {gte: 1}];
+  // 每页数量
+  uint32 size = 2 [(buf.validate.field).uint32 = {gte: 1, lte: 100}];
+}

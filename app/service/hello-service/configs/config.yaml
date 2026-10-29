@@ -1,0 +1,2 @@
+grpc_addr: ":9100"
+dsn: "host=127.0.0.1 user=postgres password=postgres dbname=hello_service port=5432 sslmode=disable TimeZone=UTC"

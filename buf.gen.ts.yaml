@@ -1,0 +1,14 @@
+version: v2
+# 前端 TS 请求桩统一由 kratos fork 版插件（tools/protoc-gen-typescript-http）生成：
+# - 插件支持 server-streaming，目前接口里没有流式方法
+# - 客户端统一注入 ClientTransport（由运营后台 src/lib/http.ts 的 createClientTransport 提供；serverStream / duplexStream 只是满足接口形状的占位）
+# - 内部 gRPC 服务（hello_service 等）不生成，只生成对外 HTTP 服务
+inputs:
+  - directory: api
+    paths:
+      - api/service/admin_service
+      - api/service/api_service
+plugins:
+  # TS 侧 → api/gen/ts（底层消息类型内联）
+  - local: ["tools/protoc-gen-typescript-http"]
+    out: api/gen/ts

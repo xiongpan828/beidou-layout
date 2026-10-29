@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package service.admin_service.admin_storage;
+
+import "third_party/google/api/annotations.proto";
+import "service/storage_service/service.proto";
+
+option go_package = "github.com/xiongpan828/beidou-layout/api/gen/go/service/admin_service/admin_storage;adminstorage";
+
+// Storage B 端存储：全部纯代理 storage-service（请求 / 响应复用底层 message）
+service Storage {
+  // ============ 文件 ============
+
+  // CreateUploadURL 签发上传地址（前端拿到后 PUT 文件字节到 upload_url）
+  rpc CreateUploadURL(storage_service.CreateUploadURLReq) returns (storage_service.CreateUploadURLReply) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/Storage/CreateUploadURL"
+      body: "*"
+    };
+  }
+  // GetFile 文件信息 + 访问地址
+  rpc GetFile(storage_service.GetFileReq) returns (storage_service.GetFileReply) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/Storage/GetFile"
+      body: "*"
+    };
+  }
+
+  // ============ 供应商 ============
+
+  // ListProvider 供应商列表（密钥不回显）
+  rpc ListProvider(storage_service.ListProviderReq) returns (storage_service.ListProviderReply) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/Storage/ListProvider"
+      body: "*"
+    };
+  }
+  // CreateProvider 创建供应商
+  rpc CreateProvider(storage_service.CreateProviderReq) returns (storage_service.CreateProviderReply) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/Storage/CreateProvider"
+      body: "*"
+    };
+  }
+  // UpdateProvider 更新供应商（密钥留空 = 不改）
+  rpc UpdateProvider(storage_service.UpdateProviderReq) returns (storage_service.UpdateProviderReply) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/Storage/UpdateProvider"
+      body: "*"
+    };
+  }
+  // DeleteProvider 删除供应商
+  rpc DeleteProvider(storage_service.DeleteProviderReq) returns (storage_service.DeleteProviderReply) {
+    option (google.api.http) = {
+      post: "/api/v1/admin/Storage/DeleteProvider"
+      body: "*"
+    };
+  }
+}

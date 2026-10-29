@@ -1,0 +1,8 @@
+已部署到 {{ include "beidou-layout.namespace" . }}（镜像 {{ .Values.image.registry }}/*:{{ include "beidou-layout.tag" . }}）
+
+集群内入口：gateway.{{ include "beidou-layout.namespace" . }}:9080（外部入口把 https://{{ .Values.config.domain }} 转发到这里）
+  /admin/   运营后台（/ 跳到这里）   /api/v1/*   BFF   /api/v1/storage/*   文件读写（URL 签名）
+
+验证：
+  kubectl -n {{ include "beidou-layout.namespace" . }} get pods
+  helm -n {{ include "beidou-layout.namespace" . }} test {{ .Release.Name }}

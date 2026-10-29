@@ -1,0 +1,41 @@
+# APISIX 单机数据面（standalone：无 etcd / Admin API / Dashboard）
+# 路由与上游来自同目录 apisix.yaml；两份文件都打进镜像，改完重新构建 / 重启生效。
+apisix:
+  node_listen: 9080
+  router:
+    # 按路径路由
+    http: radixtree_uri
+  # 自定义插件目录（社区推荐做法，不覆盖内置插件文件）：
+  # 插件放在 /usr/local/apisix/custom/apisix/plugins/*.lua，按 require("apisix.plugins.xxx") 加载
+  extra_lua_path: "/usr/local/apisix/custom/?.lua"
+  # DNS 不写死 dns_resolver：默认读容器 /etc/resolv.conf（k8s CoreDNS），
+  # 并遵循 search / ndots，所以 upstream 写短服务名（api-service:8100）。
+
+# 顶层 plugins：只加载本项目实际使用的插件
+plugins:
+  - proxy-control
+# 不使用 stream 代理；显式置空，避免默认 stream 插件加载无关依赖
+stream_plugins: []
+
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+
+nginx_config:
+  # 默认 auto = 节点核数：多核节点会起很多 worker，容易超过 Pod 内存上限（512Mi）被 OOMKilled；
+  # 流量小，固定 2 个，扩容靠加副本
+  worker_processes: 2
+  http:
+    # 文件上传（经 /api/v1/storage/* 代理写入）最大 50MB，留出图片 / 视频余量
+    client_max_body_size: 50m
+    # 真实客户端 IP（全局）：外部入口（TLS 终止）写 X-Real-IP；只信任私有网段来源（外部入口、k8s 节点 / Pod 网段），
+    # 公网直连伪造的头不生效（按自己的网络环境增减网段）。生效后 $remote_addr = 客户端，网关发给上游的 X-Real-IP / X-Forwarded-For
+    # 都是真实 IP。对外入口或 LB 会做 SNAT 时，必须在这里还原。
+    real_ip_header: X-Real-IP
+    real_ip_from:
+      - 127.0.0.1
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+# 日志：镜像里 logs/access.log、error.log 已软链到 stdout / stderr
